@@ -1,5 +1,9 @@
 
 
+
+
+
+
 // ============================================================
 // ESTADO GLOBAL
 // ============================================================
@@ -478,7 +482,7 @@ let numerosWhatsApp = { domicilio: "", recoger: "" };
 
 
 async function precargarConfiguracion() {
-    const DEFAULT_NUMBER = "3506340678";
+    const DEFAULT_NUMBER = "3171000099";
     const cb = `?cb=${Date.now()}`;
     
     try {
@@ -815,7 +819,7 @@ function mostrarHorarios() {
     });
 }
 function mostrarUbicacion() {
-    const direccion = "Cl. 43 #34-25 barrio El Prado, Bucaramanga";
+    const direccion = "Cl 105 #41a-91, Floridablanca, Santander";
     
     Swal.fire({
         title: '📍 Ubicación',
@@ -1167,7 +1171,6 @@ window.onpopstate = function() {
 };
 
 document.addEventListener("DOMContentLoaded", inicializarApp);
-
 
 
 
