@@ -1,4 +1,5 @@
 
+
 // ============================================================
 // ESTADO GLOBAL
 // ============================================================
@@ -153,164 +154,30 @@ function abrirModalProducto(p) {
     imgModal.src = rutaImg ? limpiarRuta(rutaImg) : "";
     imgModal.style.display = rutaImg ? "block" : "none";
 
-    document.getElementById("modal-obs").value = "";
-    document.getElementById("modal-cantidad").value = 1;
-
+    // Limpiamos los contenedores interactivos y de acompañamientos/adicionales
     const listCont = document.getElementById("modal-acompanamientos-list");
-    listCont.innerHTML = "";
+    if (listCont) listCont.innerHTML = "";
 
-    // --- SECCIÓN: ACOMPAÑAMIENTOS ---
-    if (acompanamientosConfig?.productos?.[cod]) {
-        acompanamientosConfig.productos[cod].forEach(nombreGrupo => {
-            const opciones = acompanamientosConfig.grupos[nombreGrupo];
-            if (opciones) {
-                const div = document.createElement("div");
-                div.innerHTML = `<h4 style="margin:15px 0 8px 0; font-size:0.9rem;">Selecciona tu ${nombreGrupo}:</h4>`;
-                opciones.forEach((op, idx) => {
-                    div.innerHTML += `
-                        <label class="item-acomp">
-                            <input type="radio" name="grupo_${nombreGrupo}" value="${op}" ${idx === 0 ? 'checked' : ''}> 
-                            <span>${op}</span>
-                        </label>`;
-                });
-                listCont.appendChild(div);
-            }
-        });
-    }
+    const inputCantidad = document.getElementById("modal-cantidad");
+    if (inputCantidad) inputCantidad.value = 1;
 
-// --- SECCIÓN: ADICIONALES (Corregida con búsqueda de precio real) ---
-if (adicionalesConfig?.productos?.[cod]) {
-    adicionalesConfig.productos[cod].forEach(nombreGrupo => {
-        const opciones = adicionalesConfig.grupos[nombreGrupo];
-        if (opciones) {
-            const divAdic = document.createElement("div");
-            divAdic.className = "seccion-adicionales";
-            divAdic.innerHTML = `<h4 style="margin:20px 0 10px 0; font-size:0.9rem; border-top:1px solid #eee; padding-top:10px;">${nombreGrupo}:</h4>`;
-            
-            opciones.forEach(op => {
-                // BUSCAMOS EL PRECIO REAL EN EL MENÚ USANDO EL CÓDIGO
-                const productoEnMenu = encontrarProductoPorCodigo(op.codigo);
-                const precioReal = productoEnMenu ? Number(productoEnMenu.precio) : 0;
+    const inputObs = document.getElementById("modal-obs");
+    if (inputObs) inputObs.value = "";
 
-                const itemDiv = document.createElement("div");
-                itemDiv.style = "display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; background:#f4f4f4; padding:8px 12px; border-radius:10px;";
-                itemDiv.innerHTML = `
-                    <div style="display:flex; flex-direction:column;">
-                        <span style="font-size:0.85rem; font-weight:600; color:#333;">${op.nombre}</span>
-                        <span style="font-size:0.75rem; color:#dca600; font-weight:bold;">+$${precioReal.toLocaleString()}</span>
-                    </div>
-                    <div class="controles-cantidad-adic" style="display:flex; align-items:center; gap:12px;">
-                        <button onclick="cambiarCantAdic(this, -1)" style="width:28px; height:28px; border-radius:50%; border:1px solid #ddd; background:#fff; cursor:pointer; font-weight:bold;">-</button>
-                        <input type="number" class="input-adic" 
-                               data-codigo="${op.codigo}" 
-                               data-nombre="${op.nombre}" 
-                               data-precio="${precioReal}" 
-                               value="0" readonly 
-                               style="width:25px; text-align:center; border:none; background:transparent; font-weight:bold; font-size:0.9rem;">
-                        <button onclick="cambiarCantAdic(this, 1)" style="width:28px; height:28px; border-radius:50%; border:1px solid #ddd; background:#fff; cursor:pointer; font-weight:bold;">+</button>
-                    </div>
-                `;
-                divAdic.appendChild(itemDiv);
-            });
-            listCont.appendChild(divAdic);
-        }
-    });
-}
-
-    // --- SECCIÓN: SUBTOTAL EN MODAL ---
-    const divSubtotal = document.createElement("div");
-    divSubtotal.id = "contenedor-subtotal-modal";
-    divSubtotal.style = "margin-top:20px; padding:15px; border-top:2px dashed #ddd; text-align:right;";
-    divSubtotal.innerHTML = `
-        <span style="font-weight:bold; color:#666;">Subtotal:</span>
-        <span id="subtotal-modal-valor" style="font-size:1.2rem; font-weight:bold; color:var(--color-principal); margin-left:10px;">$0</span>
-    `;
-    listCont.appendChild(divSubtotal);
-
-    // Inicializar subtotal
-    actualizarSubtotalModal();
-
-    // Lógica del botón agregar... (se mantiene igual)
+    // Ocultar o remover el botón de confirmar/pedir si existe en el DOM del modal
     const btnAgregar = document.querySelector(".btn-agregar-modal");
-    const estaAbierto = verificarHorario(); 
-    if (!estaAbierto) {
-        btnAgregar.innerText = "Cerrado temporalmente";
-        btnAgregar.style.background = "#555";
-        btnAgregar.disabled = true;
-    } else {
-        btnAgregar.innerText = "Confirmar pedido 🛒";
-        btnAgregar.style.background = "var(--color-principal)";
-        btnAgregar.disabled = false;
+    if (btnAgregar) {
+        btnAgregar.style.display = "none";
     }
-    btnAgregar.style.marginBottom = "30px"; 
-    btnAgregar.style.position = "relative";
+
+    // Mostrar el modal visual
     document.getElementById("modal-producto").classList.add("activo");
     history.pushState({ modal: "producto" }, "");
-}
-function cambiarCantAdic(btn, delta) {
-    const input = btn.parentElement.querySelector('.input-adic');
-    let valor = parseInt(input.value) + delta;
-    if (valor < 0) valor = 0;
-    input.value = valor;
-    
-    // Cada vez que cambia una cantidad, actualizamos el subtotal
-    actualizarSubtotalModal();
-}
-
-function actualizarSubtotalModal() {
-    if (!productoModal) return;
-
-    // 1. Precio base del producto (ej: 26.500)
-    const precioBase = Number(productoModal.precio) || 0;
-    
-    // 2. Cantidad de platos principales
-    const cantPrincipal = parseInt(document.getElementById("modal-cantidad").value) || 1;
-    
-    // 3. Sumar adicionales (Costo Total de Extras)
-    // Estos NO se multiplican por cantPrincipal, son unidades fijas.
-    let sumaTotalAdicionales = 0;
-    const inputsAdic = document.querySelectorAll(".input-adic");
-    
-    inputsAdic.forEach(input => {
-        const cantidadExtra = parseInt(input.value) || 0;
-        const precioUnitarioExtra = Number(input.dataset.precio) || 0;
-        sumaTotalAdicionales += (cantidadExtra * precioUnitarioExtra);
-    });
-
-    // 4. NUEVA FÓRMULA: (Precio Base * Cantidad Platos) + Costo Total de Adicionales
-    const totalFinal = (precioBase * cantPrincipal) + sumaTotalAdicionales;
-
-    // 5. Actualizar el valor en el modal
-    const lblSubtotal = document.getElementById("subtotal-modal-valor");
-    if (lblSubtotal) {
-        lblSubtotal.innerText = "$" + totalFinal.toLocaleString();
-    }
-}
-
-function cambiarCantAdic(btn, delta) {
-    const input = btn.parentElement.querySelector('.input-adic');
-    let val = parseInt(input.value) + delta;
-    if (val < 0) val = 0;
-    input.value = val;
-    
-    // ACTUALIZACIÓN INSTANTÁNEA
-    actualizarSubtotalModal();
-}
-
-function cambiarCantidad(delta) {
-    const input = document.getElementById("modal-cantidad");
-    let val = parseInt(input.value) + delta;
-    if (val < 1) val = 1;
-    input.value = val;
-    
-    // ACTUALIZACIÓN INSTANTÁNEA
-    actualizarSubtotalModal();
 }
 
 function cerrarModalProducto() {
     document.getElementById("modal-producto").classList.remove("activo");
 }
-
 // ============================================================
 // CARRITO Y WHATSAPP
 // ============================================================
@@ -1184,6 +1051,12 @@ window.onpopstate = function() {
 };
 
 document.addEventListener("DOMContentLoaded", inicializarApp);
+
+
+
+
+
+
 
 
 
