@@ -1,5 +1,4 @@
 
-
 // ============================================================
 // ESTADO GLOBAL
 // ============================================================
@@ -154,7 +153,6 @@ function abrirModalProducto(p) {
     imgModal.src = rutaImg ? limpiarRuta(rutaImg) : "";
     imgModal.style.display = rutaImg ? "block" : "none";
 
-    // Limpiamos los contenedores interactivos y de acompañamientos/adicionales
     const listCont = document.getElementById("modal-acompanamientos-list");
     if (listCont) listCont.innerHTML = "";
 
@@ -164,13 +162,18 @@ function abrirModalProducto(p) {
     const inputObs = document.getElementById("modal-obs");
     if (inputObs) inputObs.value = "";
 
-    // Ocultar o remover el botón de confirmar/pedir si existe en el DOM del modal
-    const btnAgregar = document.querySelector(".btn-agregar-modal");
+    // 🚫 OCULTAR CONTROLES DE PEDIDO Y BOTONES DE ACCIÓN EN EL MODAL
+    const btnAgregar = document.querySelector(".btn-agregar-modal") || document.querySelector("#modal-producto button");
     if (btnAgregar) {
         btnAgregar.style.display = "none";
     }
 
-    // Mostrar el modal visual
+    // Ocultar también la sección de cantidad u observaciones si están visibles en el modal
+    const contenedorControles = document.querySelector(".contenedor-controles-modal") || document.querySelector(".modal-footer");
+    if (contenedorControles) {
+        contenedorControles.style.display = "none";
+    }
+
     document.getElementById("modal-producto").classList.add("activo");
     history.pushState({ modal: "producto" }, "");
 }
