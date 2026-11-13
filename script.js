@@ -4,6 +4,7 @@
 
 
 
+
 // ============================================================
 // ESTADO GLOBAL
 // ============================================================
@@ -881,79 +882,36 @@ function renderMenu() {
     const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
     const hoy = normalizar(diasSemana[new Date().getDay()]);
 
-    const categorias = Object.keys(menuData);
-
-    // =========================
-    // ⭐ RECOMENDADOS (SOLO VISUALIZACIÓN)
-    // =========================
-    if (menuConfig?.recomendados && Object.keys(menuConfig.recomendados).length > 0) {
-
-        let htmlChef = `<h3 class="titulo-categoria">🍔⭐ Promo del día (${hoy}) ⭐🍔</h3><div class="grid-productos">`;
-        let hayRecomendados = false;
-
-        categorias.forEach(cat => {
-            menuData[cat].forEach(p => {
-                const cod = String(p.codigo).trim();
-                const diasOriginal = menuConfig.recomendados[cod];
-
-                const esHoy = diasOriginal?.some(d => normalizar(d) === hoy);
-
-                if (esHoy) {
-                    hayRecomendados = true;
-
-                    const img = imagenes[cod] || p.imagen;
-
-                    htmlChef += `
-                        <div class="card-producto card-recomendado" style="cursor: default;">
-                            <div class="contenedor-media">
-                                <span class="badge-estrella">⭐ Hoy</span>
-                                ${img ? `<img src="${limpiarRuta(img)}" loading="lazy" decoding="async">` : '<div class="sin-foto"></div>'}
-                            </div>
-                            <div class="info">
-                                <span class="nombre">${p.articulo}</span>
-                                <span class="precio">$${Number(p.precio).toLocaleString()}</span>
-                            </div>
-                        </div>
-                    `;
-                }
-            });
-        });
-
-        if (hayRecomendados) {
-            // BOTÓN NAV
-            const btnChef = document.createElement("button");
-            btnChef.innerText = "⭐ Recomendados";
-
-            btnChef.onclick = (e) => {
-                document.querySelectorAll("#nav-categorias button").forEach(b => b.classList.remove("activo"));
-                e.target.classList.add("activo");
-                cambiarCategoria("recomendados");
-                toggleCategorias();
-            };
-
-            navCont.appendChild(btnChef);
-
-            // BLOQUE (VISIBLE)
-            const divChef = document.createElement("div");
-            divChef.className = "bloque-categoria seccion-chef";
-            divChef.id = "cat-recomendados";
-            divChef.style.display = "block";
-
-            divChef.innerHTML = htmlChef + `</div>`;
-            menuCont.appendChild(divChef);
+    // ⭐ Orden personalizado desde grupo1.json
+    let categorias = window.ordenGruposPersonalizado || Object.keys(menuData);
+    Object.keys(menuData).forEach(cat => {
+        if (!categorias.includes(cat)) {
+            categorias.push(cat);
         }
-    }
+    });
+
+    // Grupos especiales cargados desde grupo1.json
+    const gruposEspeciales = window.gruposEspecialesConfig || [];
 
     // =========================
-    // 📂 CATEGORÍAS (SOLO VISUALIZACIÓN)
+    // 📂 CATEGORÍAS (CARTA DEL RESTAURANTE)
     // =========================
     categorias.forEach((cat) => {
+        if (!menuData[cat]) return;
+
+        // 🚫 Omitir y no renderizar el grupo PROMOS
+        if (normalizar(cat).toUpperCase() === "PROMOS") return;
 
         const esInicial = (cat === window.categoriaInicial);
+        const esEspecial = gruposEspeciales.includes(cat);
 
         // BOTÓN NAV
         const btn = document.createElement("button");
-        btn.innerText = cat;
+        btn.innerHTML = esEspecial ? `🍣 ${cat} 🚢` : cat;
+
+        if (esEspecial) {
+            btn.classList.add("btn-grupo-especial");
+        }
 
         if (esInicial) btn.classList.add("activo");
 
@@ -966,9 +924,9 @@ function renderMenu() {
 
         navCont.appendChild(btn);
 
-        // BLOQUE
+        // BLOQUE DE CATEGORÍA
         const divCat = document.createElement("div");
-        divCat.className = "bloque-categoria";
+        divCat.className = esEspecial ? "bloque-categoria bloque-especial" : "bloque-categoria";
         divCat.id = "cat-" + normalizar(cat).replace(/\s+/g, "");
 
         divCat.style.display = esInicial ? "block" : "none";
@@ -980,8 +938,10 @@ function renderMenu() {
             html += `<div class="banner-categoria-grupo"><img src="${limpiarRuta(banner)}"></div>`;
         }
 
-        html += `<h3 class="titulo-categoria">${cat}</h3><div class="grid-productos">`;
+        const tituloTexto = esEspecial ? `⭐ ${cat} ⭐` : cat;
+        html += `<h3 class="titulo-categoria ${esEspecial ? 'titulo-especial' : ''}">${tituloTexto}</h3><div class="grid-productos">`;
 
+        // LISTA DE PRODUCTOS CON CONTROL DE DÍAS (DESHABILITADO SI APLICA)
         menuData[cat].forEach(p => {
             const cod = String(p.codigo).trim();
             const img = imagenes[cod] || p.imagen;
@@ -994,20 +954,23 @@ function renderMenu() {
             ) {
                 return;
             }
+
             const esRecomendadoGeneral = diasConfigurados && diasConfigurados.length > 0;
             const esRecHoy = diasConfigurados?.some(d => normalizar(d) === hoy);
             const estaDeshabilitado = esRecomendadoGeneral && !esRecHoy;
 
-            // Se removió el onclick de abrirModalProducto y se añadió style="cursor: default;"
+            const desc = (typeof descripciones !== 'undefined' && descripciones[cod]) || p.descripcion || "";
+
             html += `
-                <div class="card-producto ${estaDeshabilitado ? 'producto-deshabilitado' : ''}" style="cursor: default;">
+                <div class="card-producto ${estaDeshabilitado ? 'producto-deshabilitado' : 'card-modo-consulta'}">
                     <div class="contenedor-media">
-                        ${esRecHoy ? '<span class="badge-estrella">⭐ Recomendado</span>' : ''}
+                        ${esRecHoy ? '<span class="badge-estrella">⭐ Hoy</span>' : ''}
                         ${estaDeshabilitado ? '<div class="overlay-deshabilitado">No disponible hoy</div>' : ''}
-                        ${img ? `<img src="${limpiarRuta(img)}" style="${estaDeshabilitado ? 'filter: grayscale(1); opacity: 0.5;' : ''}">` : '<div class="sin-foto"></div>'}
+                        ${img ? `<img src="${limpiarRuta(img)}" style="${estaDeshabilitado ? 'filter: grayscale(1); opacity: 0.5;' : ''}" loading="lazy" decoding="async">` : '<div class="sin-foto"></div>'}
                     </div>
                     <div class="info">
                         <span class="nombre">${p.articulo} ${estaDeshabilitado ? '<small>(Promo otro día)</small>' : ''}</span>
+                        ${desc ? `<p class="descripcion">${desc}</p>` : ''}
                         <span class="precio" style="${estaDeshabilitado ? 'text-decoration: line-through; color: gray;' : ''}">$${Number(p.precio).toLocaleString()}</span>
                     </div>
                 </div>
@@ -1165,13 +1128,6 @@ window.onpopstate = function() {
 };
 
 document.addEventListener("DOMContentLoaded", inicializarApp);
-
-
-
-
-
-
-
 
 
 
